@@ -1,0 +1,29 @@
+# Rust
+/target/
+**/target/
+
+# Node
+node_modules/
+dist/
+
+# Tauri üretilen dosyalar
+file-finder-ui/src-tauri/gen/
+
+# Derleme çıktıları ve yerel ikililer
+*.exe
+*.msi
+*.pdb
+
+# WebView2Loader.dll ve sqlite3.dll bilerek DEPODA tutulur:
+# tauri.conf.json bunları bundle.resources içinde arıyor, yoksa derleme kırılır.
+!file-finder-ui/src-tauri/WebView2Loader.dll
+!file-finder-ui/src-tauri/sqlite3.dll
+
+# Yerel yedekler ve geçici araçlar
+.backup-*/
+temp_libs/
+
+# Editör
+.vscode/
+.idea/
+*.log

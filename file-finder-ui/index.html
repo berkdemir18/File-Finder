@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="tr" data-theme="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="File Finder — Windows için milisaniyeler içinde dosya ve uygulama arama"
+    />
+    <title>File Finder</title>
+    <style>
+      /* Pencere köşeleri yuvarlak olduğu için zemin saydam kalır; yükleme
+         sırasında beyaz bir kare parlamasın diye burada da boyanmaz. */
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+        background: transparent;
+        width: 100vw;
+        height: 100vh;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

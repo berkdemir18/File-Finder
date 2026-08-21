@@ -1,0 +1,45 @@
+[package]
+name = "file-finder-service"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "file-finder-service"
+path = "src/main.rs"
+
+[dependencies]
+shared = { path = "../shared" }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tokio = { workspace = true }
+rusqlite = { workspace = true }
+futures = "0.3"
+log = { workspace = true }
+env_logger = { workspace = true }
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+chrono = { workspace = true }
+
+
+[dependencies.windows]
+version = "0.58"
+features = [
+    # Service Control Manager
+    "Win32_System_Services",
+    # File system & MFT
+    "Win32_Storage_FileSystem",
+    "Win32_System_IO",
+    "Win32_System_Ioctl",
+    # Named Pipes
+    "Win32_System_Pipes",
+    # Volume management
+    "Win32_System_WindowsProgramming",
+    # Handles
+    "Win32_Foundation",
+    # Threading
+    "Win32_System_Threading",
+    # Error handling
+    "Win32_System_SystemServices",
+    # Security
+    "Win32_Security",
+]
