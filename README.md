@@ -71,8 +71,32 @@ diske değil, indekse gider.
 [Releases](https://github.com/berkdemir18/File-Finder/releases/latest)
 sayfasından kurulum dosyasını indirip çalıştır.
 
-> Paket imzalı olmadığı için Windows SmartScreen uyarı verebilir.
-> **Ek bilgi → Yine de çalıştır** ile devam edebilirsin.
+### "Windows kişisel bilgisayarınızı korudu" uyarısı
+
+İlk çalıştırmada SmartScreen kırmızı bir pencere açıp *Yayımcı: Bilinmeyen
+yayımcı* diyecek. Bu, dosyada kötü bir şey bulunduğu anlamına **gelmiyor** —
+Windows'un söylediği şey, dosyanın kimin olduğunu doğrulayamadığı.
+
+**Neden çıkıyor.** Kurulum paketi kod imzalama sertifikasıyla imzalanmamış.
+Sertifika, yayıncının kimliğini doğrulayan ücretli bir hizmet; yıllık maliyeti
+kişisel bir projeye ayrılabilecek bütçenin üstünde. İmzasız her programda —
+kim yazmış olursa olsun — aynı ekran çıkar.
+
+**İmzalasam giderdi mi?** Tam olarak değil. Standart bir sertifikayla uyarı,
+yeterli sayıda kişi indirip çalıştırana kadar bir süre daha devam eder; ilk
+günden susturan EV sertifikalar belirgin şekilde daha pahalı.
+
+**Ne yapabilirsin.** Uyarıda **Ek bilgi → Yine de çalıştır**. Güvenmiyorsan bu
+tamamen makul: kaynak kodun tamamı bu depoda açık, [**Derleme**
+bölümündeki adımlarla](#derleme) kendin derleyip kendi ürettiğin dosyayı
+çalıştırabilirsin — kendi derlediğin dosyada bu uyarı hiç çıkmaz.
+
+Bunu "önemsiz, geç" diye sunmak istemiyorum: tanımadığın bir yerden indirdiğin
+imzasız bir programı çalıştırmadan önce duraksamak doğru bir alışkanlık.
+Buradan verebileceğim tek gerçek güvence, kaynağın açık olması ve yayınlanan
+dosyaların bu koddan derlenmiş olması.
+
+### Servis kaydı
 
 Canlı takip için arka plan servisini bir kez yönetici olarak kaydetmen gerekir:
 
@@ -182,7 +206,8 @@ Ayrıntılar için [`file-finder-ui/README.md`](file-finder-ui/README.md).
 - Yalnız **NTFS** sürücüler indekslenir; FAT32 ve exFAT diskler kapsam dışı.
 - Servis kaydı elle yapılıyor — kurulum sihirbazı bunu henüz üstlenmiyor.
 - Dosya *içeriğinde* arama yok, yalnız isim ve yol üzerinden.
-- Kurulum paketi imzalı değil.
+- Kurulum paketi imzalı değil — Windows ilk çalıştırmada uyarır
+  ([neden](#windows-kişisel-bilgisayarınızı-korudu-uyarısı)).
 
 ## Teşekkür
 

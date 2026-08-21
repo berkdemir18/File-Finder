@@ -415,8 +415,55 @@
   <section id="kurulum">
     <h2>Kurulum</h2>
     <p class="sub">
-      Kurulum dosyasını indirip çalıştır. Paket imzalı olmadığı için
-      SmartScreen uyarabilir — <b>Ek bilgi → Yine de çalıştır</b>.
+      Kurulum dosyasını indirip çalıştır. Windows kırmızı bir uyarı
+      gösterecek — neden gösterdiği ve ne yapman gerektiği aşağıda.
+    </p>
+
+    <h3 class="tbl-title" id="smartscreen">&ldquo;Windows kişisel bilgisayarınızı korudu&rdquo;</h3>
+    <p class="sub" style="margin-bottom:22px">
+      İlk çalıştırmada SmartScreen kırmızı bir pencere açıp
+      <i>Yayımcı: Bilinmeyen yayımcı</i> diyor. Bu, dosyada kötü bir şey
+      bulunduğu anlamına <b>gelmiyor</b> — Windows'un söylediği şey, dosyanın
+      kimin olduğunu doğrulayamadığı.
+    </p>
+
+    <div class="grid" style="margin-bottom:26px">
+      <div class="card">
+        <h3>Neden çıkıyor</h3>
+        <p>
+          Kurulum paketi <b>kod imzalama sertifikasıyla imzalanmamış</b>.
+          Sertifika, yayıncının kimliğini doğrulayan ücretli bir hizmet;
+          yıllık maliyeti kişisel bir projeye ayrılabilecek bütçenin üstünde.
+          İmzasız her programda — kim yazmış olursa olsun — aynı ekran çıkar.
+        </p>
+      </div>
+      <div class="card">
+        <h3>İmzalarsam gider mi</h3>
+        <p>
+          Tam olarak değil. Standart bir sertifikayla uyarı, yeterli sayıda
+          kişi indirip çalıştırana kadar bir süre daha devam eder; ilk günden
+          susturan EV sertifikalar belirgin şekilde daha pahalı. Yani imza,
+          uyarıyı anında kapatan bir düğme değil.
+        </p>
+      </div>
+      <div class="card">
+        <h3>Sen ne yapabilirsin</h3>
+        <p>
+          Uyarıda <b>Ek bilgi → Yine de çalıştır</b>. Güvenmiyorsan bu tamamen
+          makul — kaynak kodun tamamı bu depoda açık, aşağıdaki adımlarla
+          kendin derleyip kendi ürettiğin dosyayı çalıştırabilirsin. Kendi
+          derlediğin dosyada bu uyarı hiç çıkmaz.
+        </p>
+      </div>
+    </div>
+
+    <p class="note">
+      Bu uyarıyı &ldquo;önemsiz, geç&rdquo; diye sunmak istemiyorum: tanımadığın
+      bir yerden indirdiğin imzasız bir programı çalıştırmadan önce
+      duraksamak doğru bir alışkanlık. Burada verebileceğim tek gerçek güvence
+      kaynağın açık olması ve sürümlerin
+      <a href="https://github.com/berkdemir18/File-Finder/releases">Releases</a>
+      sayfasındaki dosyalarla aynı derlemeden çıkması.
     </p>
 
     <h3 class="tbl-title">Canlı takip için servisi kaydet</h3>
