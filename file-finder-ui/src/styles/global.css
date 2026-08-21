@@ -210,6 +210,37 @@ select {
   background: #f7f8fa;
 }
 
+/* Açılış: pencere ilk kare çizilince gösteriliyor, kabuk da o anda
+   yerine oturuyor. Sert bir "pat" yerine kısa bir yükseliş. */
+.app {
+  opacity: 0;
+  transform: scale(0.985);
+  transition: opacity 160ms ease-out, transform 160ms ease-out;
+}
+.app.shown {
+  opacity: 1;
+  transform: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .app {
+    transition: none;
+    transform: none;
+  }
+}
+
+/* Tam ekranda yuvarlak köşe ve kenarlık kalmamalı; yoksa ekranın
+   köşelerinde masaüstü sızıyor. */
+.app.maximized {
+  border-radius: 0;
+  border-color: transparent;
+  box-shadow: none;
+}
+.app.maximized .titlebar,
+.app.maximized .statusbar,
+.app.maximized .footer {
+  border-radius: 0;
+}
+
 /* ─── Başlık çubuğu ──────────────────────────────────────────────────────── */
 
 .titlebar {

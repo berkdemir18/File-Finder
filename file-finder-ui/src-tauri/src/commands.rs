@@ -446,6 +446,26 @@ pub async fn hide_window(window: tauri::Window) -> Result<(), String> {
 
 #[tauri::command]
 pub async fn show_window(window: tauri::Window) -> Result<(), String> {
+    let _ = window.unminimize();
+    window.show().map_err(|e| e.to_string())?;
+    window.set_focus().map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+/// Arayüz ilk karesini çizdiğinde çağrılır: pencere buraya kadar gizliydi,
+/// böylece kullanıcı boş/beyaz bir kabuk görmüyor. Yalnız ilk çağrı iş yapar.
+#[tauri::command]
+pub async fn app_ready(
+    window: tauri::Window,
+    state: State<'_, AppState>,
+) -> Result<(), String> {
+    if state
+        .startup_shown
+        .swap(true, std::sync::atomic::Ordering::SeqCst)
+    {
+        return Ok(());
+    }
+
     window.show().map_err(|e| e.to_string())?;
     window.set_focus().map_err(|e| e.to_string())?;
     Ok(())

@@ -85,6 +85,10 @@ export const ipcHideWindow = (): Promise<void> => invoke('hide_window');
 
 export const ipcShowWindow = (): Promise<void> => invoke('show_window');
 
+/// Arayüz ilk karesini çizdi: pencere açılışta gizli doğuyor, gösterme
+/// sinyalini buradan veriyoruz — böylece boş bir kabuk görünmüyor.
+export const ipcAppReady = (): Promise<void> => invoke('app_ready');
+
 // ─── Event Dinleyiciler ─────────────────────────────────────────────────────
 
 export const onIndexUpdated = (

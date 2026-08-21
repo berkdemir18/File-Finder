@@ -10,10 +10,15 @@ mod hotkey;
 mod tray;
 mod db;
 
-use tauri::{Manager, WindowEvent};
-use log::info;
+use std::sync::atomic::Ordering;
+use tauri::{Emitter, Manager, WindowEvent};
+use log::{info, warn};
 
 pub use commands::*;
+
+/// Arayüz hazır sinyali gelmezse pencereyi yine de bu süre sonunda göster.
+/// Böylece frontend patlasa bile kullanıcı görünmez bir sürece mahkûm kalmaz.
+const STARTUP_SHOW_TIMEOUT_MS: u64 = 2_500;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -48,26 +53,27 @@ pub fn run() {
             commands::get_apps,
             commands::hide_window,
             commands::show_window,
+            commands::app_ready,
             commands::get_service_status,
             commands::install_service,
         ])
         .setup(|app| {
             info!("File Finder başlatılıyor...");
 
-            // Veritabanını başlat
+            // Kurulum ana iş parçacığında (pencere mesaj döngüsüyle aynı yerde)
+            // çalışır. Burada yapılan her yavaş iş, pencerenin çizilip ama
+            // taşınamadığı / küçültülemediği / kapatılamadığı o "donmuş
+            // uygulama" hâline dönüşür. Bu yüzden burada SADECE hızlı işler
+            // var: veritabanını aç, ayarları oku, tepsiyi kur. Uygulama
+            // taraması ve indeksleme arka plana taşındı.
             {
                 let state = app.state::<state::AppState>();
-                let mut db = state.db.lock().unwrap();
-                let opened_db = db::Database::open().unwrap();
-                opened_db.init_schema().unwrap();
 
-                // Uygulamaları tara ve kaydet (Claude/Spotify vb. anında bulmak için)
-                if let Ok(start_apps) = apps::scan_start_menu() {
-                    let _ = db::queries::bulk_insert_apps(&opened_db.conn, &start_apps);
-                }
-                if let Ok(uwp_apps) = apps::scan_uwp_apps() {
-                    let _ = db::queries::bulk_insert_apps(&opened_db.conn, &uwp_apps);
-                }
+                let opened_db = db::Database::open()
+                    .map_err(|e| format!("Veritabanı açılamadı: {e}"))?;
+                opened_db
+                    .init_schema()
+                    .map_err(|e| format!("Veritabanı şeması kurulamadı: {e}"))?;
 
                 // Ayar cache'ini doldur — arama ve pencere davranışı bunu okur.
                 if let Ok(mut cache) = state.settings.lock() {
@@ -78,20 +84,49 @@ pub fn run() {
                     }
                 }
 
-                *db = Some(opened_db);
+                *state
+                    .db
+                    .lock()
+                    .map_err(|_| "Veritabanı kilidi bozuk".to_string())? = Some(opened_db);
             }
 
             let hotkey_spec = {
                 let state = app.state::<state::AppState>();
-                let cache = state.settings.lock().unwrap();
-                cache
-                    .get("hotkey")
-                    .cloned()
+                state
+                    .settings
+                    .lock()
+                    .ok()
+                    .and_then(|c| c.get("hotkey").cloned())
                     .unwrap_or_else(|| config::Config::DEFAULT_HOTKEY.to_string())
             };
 
-            // Tray icon kur
+            // Tray icon kur (hızlı, ana iş parçacığında olmalı)
             tray::setup_tray(app, &hotkey_spec)?;
+
+            // Uygulama listesi taraması: Başlat menüsü yürüyüşü + PowerShell
+            // Get-AppxPackage saniyeler sürüyor. Arka planda yapılır, sonuç
+            // hazır olunca tek seferde yazılır.
+            let scan_handle = app.handle().clone();
+            std::thread::spawn(move || {
+                let mut records = Vec::new();
+                match apps::scan_start_menu() {
+                    Ok(v) => records.extend(v),
+                    Err(e) => warn!("Başlat menüsü taranamadı: {e}"),
+                }
+                match apps::scan_uwp_apps() {
+                    Ok(v) => records.extend(v),
+                    Err(e) => warn!("UWP uygulamaları taranamadı: {e}"),
+                }
+
+                let state = scan_handle.state::<state::AppState>();
+                if let Ok(guard) = state.db.lock() {
+                    if let Some(db) = guard.as_ref() {
+                        let _ = db::queries::bulk_insert_apps(&db.conn, &records);
+                    }
+                }
+                info!("Uygulama taraması bitti: {} kayıt", records.len());
+                let _ = scan_handle.emit("apps-indexed", records.len());
+            });
 
             // Servis bağlantısını başlat (arka planda)
             let app_handle = app.handle().clone();
@@ -104,6 +139,23 @@ pub fn run() {
             let app_handle2 = app.handle().clone();
             std::thread::spawn(move || {
                 hotkey::register_global_hotkey(app_handle2, hotkey_spec);
+            });
+
+            // Pencere `visible: false` doğuyor; arayüz ilk karesini çizince
+            // `app_ready` ile kendini gösteriyor. Sinyal gelmezse emniyet
+            // zamanlayıcısı devreye girer.
+            let show_handle = app.handle().clone();
+            std::thread::spawn(move || {
+                std::thread::sleep(std::time::Duration::from_millis(STARTUP_SHOW_TIMEOUT_MS));
+                let state = show_handle.state::<state::AppState>();
+                if state.startup_shown.swap(true, Ordering::SeqCst) {
+                    return; // arayüz zaten gösterdi
+                }
+                warn!("Arayüz hazır sinyali gelmedi, pencere yine de açılıyor.");
+                if let Some(window) = show_handle.get_webview_window("main") {
+                    let _ = window.show();
+                    let _ = window.set_focus();
+                }
             });
 
             Ok(())

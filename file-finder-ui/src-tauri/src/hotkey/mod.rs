@@ -104,17 +104,25 @@ fn toggle_window(app: &AppHandle) {
 
     let visible = window.is_visible().unwrap_or(false);
     let focused = window.is_focused().unwrap_or(false);
+    let minimized = window.is_minimized().unwrap_or(false);
 
     // Görünür ama arkadaysa gizlemek yerine öne getir — kısayola basan
     // kullanıcı pencereyi kapatmak değil, ona ulaşmak istiyor.
-    if visible && focused {
+    if visible && focused && !minimized {
         let _ = window.hide();
         return;
     }
 
-    if let Err(e) = position_on_active_monitor(&window) {
-        warn!("Monitör konumlandırma hatası: {}", e);
+    // Kullanıcı pencereyi kendi taşıdıysa/büyüttüyse yerini zorla değiştirme;
+    // yalnız gizliyken (yani yeniden çağrılırken) imlecin monitörüne hizala.
+    let maximized = window.is_maximized().unwrap_or(false);
+    if !visible && !maximized {
+        if let Err(e) = position_on_active_monitor(&window) {
+            warn!("Monitör konumlandırma hatası: {}", e);
+        }
     }
+
+    let _ = window.unminimize();
     let _ = window.show();
     let _ = window.set_focus();
     let _ = app.emit("window-shown", ());

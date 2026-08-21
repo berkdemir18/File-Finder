@@ -3,32 +3,38 @@
 /// Admin hakkı gerektirmez — standart kullanıcı izinleri yeterlidir.
 
 use anyhow::Result;
-use log::{error, info, warn};
-use std::sync::Arc;
-use tauri::{Manager, Emitter};
+use log::{info, warn};
+use tauri::Emitter;
 
 use crate::state::AppState;
+
+/// Bir yazma partisindeki kayıt sayısı ve partiler arası nefes payı.
+/// İkisi birlikte, arka plan indekslemesinin arayüzü aç bırakmasını sağlar.
+const FLUSH_BATCH: usize = 2_000;
+const FLUSH_PAUSE_MS: u64 = 25;
 
 /// Fallback indeksleme başlat
 pub async fn start_fallback_indexing(state: AppState, app: tauri::AppHandle) {
     info!("Fallback indeksleme başlatılıyor (ReadDirectoryChangesW)...");
 
-    // Öncelikli tarama hedefleri (Masaüstü, Belgeler vb. kullanıcı notlarını anında bulmak için)
-    let drives = get_scan_targets();
+    // Hedefler TEK bir arka plan iş parçacığında, sırayla taranır.
+    // Önceden her disk için ayrı bir blocking task açılıyordu: diskler aynı
+    // anda dövülüyor ve hepsi tek SQLite bağlantısının kilidine yükleniyordu,
+    // o yüzden açılışta hem sistem hem arama saniyelerce takılıyordu.
+    let targets = get_scan_targets();
 
-    for drive in drives {
-        let state2 = state.clone();
-        let drive2 = drive.clone();
-        tokio::task::spawn_blocking(move || {
-            if let Err(e) = scan_directory_fallback(&drive2, &state2) {
-                warn!("Fallback tarama hatası {}: {}", drive2, e);
+    let state2 = state.clone();
+    let app2 = app.clone();
+    tokio::task::spawn_blocking(move || {
+        for target in targets {
+            if let Err(e) = scan_directory_fallback(&target, &state2) {
+                warn!("Fallback tarama hatası {}: {}", target, e);
             }
-        });
-    }
+        }
+        info!("Fallback taraması tamamlandı.");
+        let _ = app2.emit("indexing-finished", ());
+    });
 
-    // ReadDirectoryChangesW ile değişiklikleri izle
-    // Bu basitleştirilmiş bir implementasyon; gerçek değişiklik izleme
-    // ayrı bir thread'de çalışır
     info!("Fallback modu aktif. Değişiklikler izleniyor...");
 
     // Frontend'e fallback modu haber ver
@@ -131,11 +137,15 @@ fn scan_directory_fallback(root: &str, state: &AppState) -> Result<()> {
             }
 
             scanned += 1;
-            if scanned % 10_000 == 0 {
-                // Toplu insert yap ve belleği temizle
+            if records.len() >= FLUSH_BATCH {
+                // Toplu insert yap ve belleği temizle. Parti küçük tutuluyor:
+                // yazma sırasında veritabanı kilidi arama komutlarını da
+                // bloklar, 10.000'lik partide arama gözle görülür donuyordu.
                 flush_records_to_db(&records, state);
                 records.clear();
                 info!("Fallback: {} dosya tarandı", scanned);
+                // Kilidi ve diski bırak; açılıştaki ilk aramalar öne geçsin.
+                std::thread::sleep(std::time::Duration::from_millis(FLUSH_PAUSE_MS));
             }
         }
     }

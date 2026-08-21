@@ -1,3 +1,4 @@
+use std::sync::atomic::AtomicBool;
 use std::sync::{Arc, Mutex};
 use std::collections::HashMap;
 
@@ -14,6 +15,9 @@ pub struct AppState {
     pub settings: Arc<Mutex<HashMap<String, String>>>,
     /// Pencere görünür mü?
     pub window_visible: Arc<Mutex<bool>>,
+    /// Açılışta pencere bir kez gösterildi mi? Arayüzün `app_ready` sinyali
+    /// ile emniyet zamanlayıcısı yarışır; kazanan bunu işaretler.
+    pub startup_shown: Arc<AtomicBool>,
 }
 
 impl AppState {
@@ -24,6 +28,7 @@ impl AppState {
             index_mode: Arc::new(Mutex::new(crate::ipc::IndexMode::Fallback)),
             settings: Arc::new(Mutex::new(HashMap::new())),
             window_visible: Arc::new(Mutex::new(false)),
+            startup_shown: Arc::new(AtomicBool::new(false)),
         }
     }
 }

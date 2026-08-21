@@ -18,7 +18,7 @@ import { useKeyboardNav } from './hooks/useKeyboardNav';
 import { FILTER_GROUPS, type FilterGroup } from './lib/fileKinds';
 import { formatCount } from './lib/format';
 import { openResult, revealResult, toggleResultFavorite } from './lib/actions';
-import { ipcDeleteFile, ipcHideWindow } from './lib/ipc';
+import { ipcAppReady, ipcDeleteFile, ipcHideWindow } from './lib/ipc';
 import {
   onServiceStatusChanged,
   onOpenSettings,
@@ -78,6 +78,8 @@ const App: React.FC = () => {
   const [pendingDelete, setPendingDelete] = useState<SearchResult | null>(null);
   const [indexing, setIndexing] = useState<IndexingProgress | null>(null);
   const [home, setHome] = useState<string | null>(null);
+  const [shown, setShown] = useState(false);
+  const [maximized, setMaximized] = useState(false);
 
   // ─── Kurulum ──────────────────────────────────────────────────────────────
 
@@ -88,6 +90,38 @@ const App: React.FC = () => {
     loadFavorites();
     homeDir().then(setHome).catch(() => setHome(null));
   }, [loadSettings, loadIndexStats, loadServiceStatus, loadFavorites]);
+
+  // Pencere `visible: false` doğuyor. İlk kare çizilene kadar gizli kalması,
+  // eskiden görülen boş/donuk kabuk anını tamamen kaldırıyor; gösterme
+  // sinyalini iki kare bekledikten sonra veriyoruz ki açılan pencere dolu olsun.
+  useEffect(() => {
+    let cancelled = false;
+    const raf = requestAnimationFrame(() =>
+      requestAnimationFrame(() => {
+        if (cancelled) return;
+        setShown(true);
+        void ipcAppReady().catch(() => {});
+      })
+    );
+    return () => {
+      cancelled = true;
+      cancelAnimationFrame(raf);
+    };
+  }, []);
+
+  // Büyütme durumu: köşe yuvarlaması ve kenarlık tam ekranda kalkmalı.
+  useEffect(() => {
+    let unlisten: (() => void) | undefined;
+    const sync = () => void appWindow.isMaximized().then(setMaximized).catch(() => {});
+    sync();
+    appWindow
+      .onResized(sync)
+      .then((fn) => {
+        unlisten = fn;
+      })
+      .catch(() => {});
+    return () => unlisten?.();
+  }, []);
 
   // Sayfa boyutu ayardan gelir.
   useEffect(() => {
@@ -209,8 +243,16 @@ const App: React.FC = () => {
   const showFilteredEmpty = hasQuery && results.length > 0 && visible.length === 0;
 
   return (
-    <div className="app">
-      <div className="titlebar" data-tauri-drag-region>
+    <div className={`app${shown ? ' shown' : ''}${maximized ? ' maximized' : ''}`}>
+      <div
+        className="titlebar"
+        data-tauri-drag-region
+        onDoubleClick={(e) => {
+          // Yalnız boş alanda: düğmeye çift tıklamak pencereyi büyütmesin.
+          if ((e.target as HTMLElement).closest('.titlebar-btn')) return;
+          void appWindow.toggleMaximize();
+        }}
+      >
         <div className="titlebar-brand" data-tauri-drag-region>
           <Logo size={22} />
           <span data-tauri-drag-region>File Finder</span>
@@ -224,13 +266,17 @@ const App: React.FC = () => {
           >
             {view === 'settings' ? <ArrowLeft size={16} /> : <Settings2 size={16} />}
           </button>
-          <button className="titlebar-btn" title="Küçült" onClick={() => appWindow.minimize()}>
+          <button
+            className="titlebar-btn"
+            title="Simge durumuna küçült"
+            onClick={() => void appWindow.minimize()}
+          >
             <Minus size={16} />
           </button>
           <button
             className="titlebar-btn"
-            title="Büyüt"
-            onClick={() => appWindow.toggleMaximize()}
+            title={maximized ? 'Küçült' : 'Büyüt'}
+            onClick={() => void appWindow.toggleMaximize()}
           >
             <Square size={13} />
           </button>
